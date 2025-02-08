@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMG Visualization - ElectroBiomed</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles2.css') }}">
+    <!-- EMG specific scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dsp.js@1.0.1/dsp.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+    <script type="module" src="{{ url_for('static', filename='js/script2.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+    <!-- Navigation Bar -->
+    <nav class="bg-gradient-to-b from-neutral-800 to-gray-950 p-4 shadow-md h-16">
+        <div class="container mx-auto flex flex-wrap justify-between items-center h-16">
+            <!-- Logo and Name -->
+            <div class="flex items-center space-x-2">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" class="w-8 h-8">
+                <span class="text-white text-2xl font-bold">ElectroBiomed</span>
+            </div>
+
+            <!-- Navigation Links -->
+            <div class="space-x-4 flex flex-wrap mt-4 lg:mt-0 lg:flex-nowrap">
+                <a href="{{ url_for('landing_page') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded">Inicio</a>
+                <a href="{{ url_for('biomechanics_2d_page') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded">Análisis Biomecánico 2D</a>
+                <a href="{{ url_for('emg_page') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded">AB 2D + EMG</a>
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('biomechanics_page') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded">Análisis Biomecánico 3D</a>
+                    <a href="{{ url_for('logout') }}" class="text-white hover:bg-red-700 px-3 py-2 rounded">Cerrar Sesión</a>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded">Análisis Biomecánico 3D</a>
+                {% endif %}
+                <a href="{{ url_for('landing_page') }}#agendar" class="text-white hover:bg-blue-700 px-3 py-2 rounded">Agendar Reunión</a>
+                <a href="{{ url_for('landing_page') }}#contacto" class="text-white hover:bg-blue-700 px-3 py-2 rounded">Contacto</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- EMG Content -->
+    <div class="container mx-auto px-4 py-8">
+        <div class="controls bg-white p-4 rounded-lg shadow mb-6">
+            <button id="startButton" class="bg-blue-500 text-white px-4 py-2 rounded mr-2 hover:bg-blue-600">Iniciar</button>
+            <button id="stopButton" class="bg-red-500 text-white px-4 py-2 rounded mr-4 hover:bg-red-600">Parar</button>
+            <label class="inline-flex items-center mr-4">
+                <input type="checkbox" id="channelA0Checkbox" checked class="form-checkbox h-4 w-4 text-blue-600">
+                <span class="ml-2">Habilitar Canal A0</span>
+            </label>
+            <label class="inline-flex items-center">
+                <input type="checkbox" id="channelA1Checkbox" checked class="form-checkbox h-4 w-4 text-blue-600">
+                <span class="ml-2">Habilitar Canal A1</span>
+            </label>
+            <span class="ml-4">FRECUENCIA EMG - INDICE DE FATIGA | AMPLITUD EMG - MOMENTOS</span>
+        </div>
+
+        <!-- Charts and other content from the original EMG template -->
+        <div class="chart-container bg-white p-4 rounded-lg shadow mb-6">
+            <div class="emg-chart mb-4">
+                <canvas id="chartA0"></canvas>
+            </div>
+            <div class="fft-chart">
+                <canvas id="chartFFTA0"></canvas>
+                <p class="fft-info text-gray-700">Indice de fatiga del músculo Agonista = Frecuencia Media A0 = <span id="medianFreqA0">0</span> Hz</p>
+            </div>
+        </div>
+
+        <div class="chart-container bg-white p-4 rounded-lg shadow mb-6">
+            <div class="emg-chart mb-4">
+                <canvas id="chartA1"></canvas>
+            </div>
+            <div class="fft-chart">
+                <canvas id="chartFFTA1"></canvas>
+                <p class="fft-info text-gray-700">Indice de fatiga del músculo Antagonista = Frecuencia Media A1 = <span id="medianFreqA1">0</span> Hz</p>
+                <br>&emsp;</br>
+            </div>
+        </div>
+
+      <br>&emsp;</br>
+
+    <label> CINEMÁTICA ANGULAR </label>
+
+    <div class="chart-container">
+
+        <div class="emg-chart">
+            <canvas id="angleChart"></canvas>
+        </div>
+        <div class="emg-chart">
+            <canvas  id="angularVelocityChart"></canvas>
+        </div>
+        <div class="emg-chart">
+            <canvas  id="angularAccelerationChart"></canvas>
+        </div>
+    </div>
+
+
+    <div class="container">
+        <div class="left-panel">
+          <canvas id="momentosChart"></canvas>
+         </div>
+
+
+
+        <div class="main-panel">
+          <div class="canvas-container">
+            <video class="input_video"></video>
+            <canvas class="output_canvas" width="1780px" height="1720px"></canvas>
+          </div>
+          <div class="loading">
+            <div class="spinner"></div>
+            <div class="message">Cargando</div>
+          </div>
+
+          <div class="control-panel">
+
+              <div id="joint-controls" class="controls">
+
+                <div className="joint-controls bg-white p-4 rounded shadow">
+                  <h3 className="text-lg font-semibold mb-3">Control de Articulaciones</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="shoulderRightCheck"
+                          className="form-checkbox h-4 w-4 text-blue-600"
+                          defaultChecked
+                        />
+                        <span>Hombro Derecho</span>
+                      </label>
+                    </div>
+                    <div>
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="shoulderLeftCheck"
+                          className="form-checkbox h-4 w-4 text-blue-600"
+                          defaultChecked
+                        />
+                        <span>Hombro Izquierdo</span>
+                      </label>
+                    </div>
+                    <div>
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="elbowRightCheck"
+                          className="form-checkbox h-4 w-4 text-blue-600"
+                          defaultChecked
+                        />
+                        <span>Codo Derecho</span>
+                      </label>
+                    </div>
+                    <div>
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="elbowLeftCheck"
+                          className="form-checkbox h-4 w-4 text-blue-600"
+                          defaultChecked
+                        />
+                        <span>Codo Izquierdo</span>
+                      </label>
+                    </div>
+                    <div>
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="wristRightCheck"
+                          className="form-checkbox h-4 w-4 text-blue-600"
+                          defaultChecked
+                        />
+                        <span>Muñeca Derecha</span>
+                      </label>
+                    </div>
+                    <div>
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="wristLeftCheck"
+                          className="form-checkbox h-4 w-4 text-blue-600"
+                          defaultChecked
+                        />
+                        <span>Muñeca Izquierda</span>
+                      </label>
+                    </div>
+
+                        <label><input type="checkbox" id="hipRightCheck"> Cadera Derecha</label>
+                        <label><input type="checkbox" id="kneeRightCheck"> Rodilla Derecha</label>
+                        <label><input type="checkbox" id="ankleRightCheck"> Tobillo Derecho</label>
+                        <label><input type="checkbox" id="hipLeftCheck"> Cadera Izquierda</label>
+                        <label><input type="checkbox" id="kneeLeftCheck"> Rodilla Izquierda</label>
+                        <label><input type="checkbox" id="ankleLeftCheck"> Tobillo Izquierdo</label>
+
+
+
+                  </div>
+                </div>
+
+            </div>
+
+          </div>
+
+
+        </div>
+      </div>
+
+    <br>&emsp;</br>
+    <br>&emsp;</br>
+    <br>&emsp;</br>
+    <br>&emsp;</br>
+    <br>&emsp;</br>
+    <br>&emsp;</br>
+
+
+    <!--
+    <button id="exportExcel">Export to Excel</button>
+       -->
+
+       <!--   -->
+    <table id="landmarksTable">
+        <thead>
+          <tr>
+            <th>Time (s)</th>
+            <th>Part</th>
+            <th>Landmark</th>
+            <th>X</th>
+            <th>Y</th>
+            <th>Z</th>
+
+            <th>qx</th>
+            <th>qy</th>
+            <th>qz</th>
+
+            <th>Ángulo Hombro</th>
+            <th>Ángulo Codo</th>
+            <th>Ángulo Muñeca</th>
+            <th>Vel. Angular Hombro</th>
+            <th>Vel. Angular Codo</th>
+            <th>Vel. Angular Muñeca</th>
+            <th>Acel. Angular Hombro</th>
+            <th>Acel. Angular Codo</th>
+            <th>Acel. Angular Muñeca</th>
+
+
+
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      </div>
+
+
+    <!-- Footer -->
+ <!--   <footer class="bg-gray-800 text-white py-8 mt-16">
+        <div class="container mx-auto text-center">
+            <p>&copy; 2024 ElectroBiomed. Todos los derechos reservados.</p>
+        </div>
+    </footer> -->
+</body>
+</html>

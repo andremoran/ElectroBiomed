@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Biomechanical Motion Capture</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="{{ url_for('static', filename='js/three_avatar.js') }}"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            background: #000;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .camera-section {
+            flex: 0.4;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .avatar-section {
+            flex: 0.6;
+            position: relative;
+        }
+
+        #avatar-container {
+            width: 100%;
+            height: 100%;
+        }
+
+        .camera-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+       .angles-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 5px;
+            max-width: 300px;
+            overflow-y: auto;
+            max-height: 80vh;
+        }
+
+        .controls {
+            padding: 10px;
+            background: #111;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+
+        button {
+            background: #333;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #444;
+        }
+    </style>
+           <script src="https://cdn.tailwindcss.com"></script>
+    <title>ElectroBiomed</title>
+</head>
+<body>
+    <!-- Navegación -->
+    <nav class="bg-gradient-to-b from-neutral-800 to-gray-950 p-4 shadow-md h-16">
+        <div class="container mx-auto flex flex-wrap justify-between items-center h-16">
+            <!-- Logo y Nombre -->
+            <div class="flex items-center space-x-2">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" class="w-8 h-8">
+                <span class="text-white text-2xl font-bold">ElectroBiomed</span>
+            </div>
+
+            <!-- Botones del menú -->
+            <div class="space-x-4 flex flex-wrap mt-4 lg:mt-0 lg:flex-nowrap">
+                <a href="{{ url_for('landing_page') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded">Inicio</a>
+                <a href="{{ url_for('biomechanics_2d_page') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded">Análisis Biomecánico 2D</a>
+                <a href="{{ url_for('emg_page') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded">AB 2D + EMG</a>
+                <a href="{{ url_for('biomechanics_page') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded">Análisis Biomecánico 3D</a>
+                <a href="{{ url_for('landing_page') }}#agendar" class="text-white hover:bg-blue-700 px-3 py-2 rounded">Agendar Reunión</a>
+                <a href="{{ url_for('landing_page') }}#contacto" class="text-white hover:bg-blue-700 px-3 py-2 rounded">Contacto</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="camera-section">
+            <div class="camera-grid" id="camera-grid"></div>
+            <div class="controls">
+                <button onclick="toggleCamera(0)">Camera 1</button>
+                <button onclick="toggleCamera(1)">Camera 2</button>
+                <button onclick="toggleCamera(2)">Camera 3</button>
+            </div>
+        </div>
+        <div class="avatar-section">
+            <div id="avatar-container"></div>
+            <div id="angles-panel" class="angles-panel"></div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        const activeCameras = new Set();
+        let avatarViewer;
+
+        // Inicializar Three.js viewer
+        document.addEventListener('DOMContentLoaded', () => {
+            avatarViewer = new AvatarViewer('avatar-container');
+
+            // Manejar redimensionamiento
+            window.addEventListener('resize', () => avatarViewer.resize());
+        });
+
+        socket.on('connect', () => {
+            console.log('Connected to server');
+        });
+
+        socket.on('landmarks_update', (landmarks) => {
+            avatarViewer.updateSkeleton(landmarks);
+        });
+
+        socket.on('data_update', (data) => {
+            // Actualizar avatar
+            avatarViewer.updateSkeleton(data.landmarks);
+
+            // Actualizar panel de ángulos
+            updateAnglesPanel(data.angles);
+        });
+
+
+        function updateAnglesPanel(angles) {
+            const panel = document.getElementById('angles-panel');
+            panel.innerHTML = '<h3>Joint Angles</h3>';
+
+            for (const [jointName, jointData] of Object.entries(angles)) {
+                const jointDiv = document.createElement('div');
+                jointDiv.className = 'joint-data';
+
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'joint-name';
+                nameDiv.textContent = jointName.replace('_', ' ').toUpperCase();
+                jointDiv.appendChild(nameDiv);
+
+                // Ángulos
+                for (const [angleName, value] of Object.entries(jointData.angles)) {
+                    const angleDiv = document.createElement('div');
+                    angleDiv.className = 'angle-value';
+                    angleDiv.textContent = `${angleName}: ${value.toFixed(1)}°`;
+                    jointDiv.appendChild(angleDiv);
+                }
+
+                // Velocidades angulares
+                for (const [angleName, value] of Object.entries(jointData.velocities)) {
+                    const velocityDiv = document.createElement('div');
+                    velocityDiv.className = 'velocity-value';
+                    velocityDiv.textContent = `${angleName} velocity: ${value.toFixed(1)}°/s`;
+                    jointDiv.appendChild(velocityDiv);
+                }
+
+                // Aceleraciones angulares
+                for (const [angleName, value] of Object.entries(jointData.accelerations)) {
+                    const accDiv = document.createElement('div');
+                    accDiv.className = 'acceleration-value';
+                    accDiv.textContent = `${angleName} accel: ${value.toFixed(1)}°/s²`;
+                    jointDiv.appendChild(accDiv);
+                }
+
+                panel.appendChild(jointDiv);
+            }
+        }
+
+
+        function toggleCamera(id) {
+            if (!activeCameras.has(id)) {
+                addCamera(id);
+            } else {
+                removeCamera(id);
+            }
+        }
+
+        function addCamera(id) {
+            if (!activeCameras.has(id)) {
+                const grid = document.getElementById('camera-grid');
+                const container = document.createElement('div');
+                container.className = 'camera-container';
+                container.id = `camera-container-${id}`;
+
+                const video = document.createElement('img');
+                video.className = 'camera-feed';
+                video.src = `/video_feed/${id}`;
+
+                container.appendChild(video);
+                grid.appendChild(container);
+                activeCameras.add(id);
+
+                socket.emit('start_camera', { camera_id: id });
+            }
+        }
+
+        function removeCamera(id) {
+            if (activeCameras.has(id)) {
+                const container = document.getElementById(`camera-container-${id}`);
+                container.remove();
+                activeCameras.delete(id);
+                socket.emit('stop_camera', { camera_id: id });
+            }
+        }
+    </script>
+</body>
+</html>
