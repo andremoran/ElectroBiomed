@@ -43,16 +43,24 @@ class CameraManager:
         self.biomech = MultiCameraHolisticBiomechanics()
         self.biomech_analysis = BiomechanicalAnalysis()
         self.all_landmarks = {}
+        self.camera_counter = 0  # Track number of active cameras
 
     def add_camera(self, camera_id):
         if camera_id not in self.cameras:
-            # Platform-independent camera initialization
             try:
                 if os.environ.get('RENDER') == 'true':
-                    # On Render, use a different video source or default camera
-                    cap = cv2.VideoCapture(0)  # or provide a URL to a video stream
+                    # On Render, manage multiple cameras differently
+                    if self.camera_counter == 0:
+                        # First camera - use default
+                        cap = cv2.VideoCapture(0)
+                    else:
+                        # Additional cameras - try alternative video devices
+                        for device_id in range(1, 10):  # Try several device IDs
+                            cap = cv2.VideoCapture(device_id)
+                            if cap.isOpened():
+                                break
                 else:
-                    # Local development
+                    # Local development - use camera_id directly
                     cap = cv2.VideoCapture(camera_id)
 
                 if cap.isOpened():
@@ -66,10 +74,32 @@ class CameraManager:
                         )
                     }
                     self.active_cameras.add(camera_id)
+                    self.camera_counter += 1
                     return True
+                else:
+                    print(f"Failed to open camera {camera_id}")
+                    return False
             except Exception as e:
-                print(f"Error initializing camera: {e}")
+                print(f"Error initializing camera {camera_id}: {e}")
+                return False
         return False
+
+    def release_camera(self, camera_id):
+        if camera_id in self.cameras:
+            try:
+                self.cameras[camera_id]['capture'].release()
+                self.cameras[camera_id]['holistic'].close()
+                self.active_cameras.remove(camera_id)
+                del self.cameras[camera_id]
+                self.camera_counter -= 1
+                return True
+            except Exception as e:
+                print(f"Error releasing camera {camera_id}: {e}")
+        return False
+
+    def release_all_cameras(self):
+        for camera_id in list(self.cameras.keys()):
+            self.release_camera(camera_id)
 
     def get_frame(self, camera_id):
         if camera_id in self.cameras:
