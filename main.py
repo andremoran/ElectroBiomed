@@ -3,6 +3,7 @@ from flask_socketio import SocketIO, emit
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import cv2
 import os
+import numpy as np
 from multicamera_holistic import MultiCameraHolisticBiomechanics
 from mech_analysis import BiomechanicalAnalysis
 
