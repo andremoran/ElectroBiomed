@@ -1,0 +1,11 @@
+body {
+    background-image: url('../images/fondoEB.jpg');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    backdrop-filter: brightness(0.09);
+}
+
+.content-overlay {
+    background-color: rgba(10, 10, 10, 0.8);
+}
