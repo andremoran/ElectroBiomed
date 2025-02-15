@@ -46,29 +46,37 @@ class CameraManager:
 
     def add_camera(self, camera_id):
         if camera_id not in self.cameras:
-            # Platform-independent camera initialization
             try:
+                # Configuración específica para la web
                 if os.environ.get('RENDER') == 'true':
-                    # On Render, use a different video source or default camera
-                    cap = cv2.VideoCapture(0)  # or provide a URL to a video stream
-                else:
-                    # Local development
                     cap = cv2.VideoCapture(camera_id)
-
-                if cap.isOpened():
                     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
                     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                    # Usar MJPG para mejor compatibilidad web
+                    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+                else:
+                    cap = cv2.VideoCapture(camera_id)
+                    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+
+                if cap.isOpened():
                     self.cameras[camera_id] = {
                         'capture': cap,
                         'holistic': self.biomech.mp_holistic.Holistic(
                             min_detection_confidence=0.5,
-                            min_tracking_confidence=0.5
+                            min_tracking_confidence=0.5,
+                            model_complexity=1  # Reducido para mejor rendimiento
                         )
                     }
                     self.active_cameras.add(camera_id)
+
+                    # Emitir evento de cámara iniciada
+                    socketio.emit('camera_started', {'camera_id': camera_id})
                     return True
+
             except Exception as e:
-                print(f"Error initializing camera: {e}")
+                print(f"Error initializing camera {camera_id}: {e}")
+                return False
         return False
 
     def get_frame(self, camera_id):
@@ -84,25 +92,15 @@ class CameraManager:
 
                     if landmarks:
                         self.all_landmarks[camera_id] = landmarks
-
-                        if len(self.active_cameras) > 1:
-                            merged_landmarks = self.biomech.merge_landmarks(self.all_landmarks)
-                            if merged_landmarks:
-                                current_angles = self.biomech_analysis.update_points_from_avatar(merged_landmarks)
-                                socketio.emit('data_update', {
-                                    'landmarks': merged_landmarks,
-                                    'angles': current_angles
-                                })
-                        else:
-                            current_angles = self.biomech_analysis.update_points_from_avatar(landmarks)
-                            socketio.emit('data_update', {
-                                'landmarks': landmarks,
-                                'angles': current_angles
-                            })
+                        current_angles = self.biomech_analysis.update_points_from_avatar(landmarks)
+                        socketio.emit('data_update', {
+                            'landmarks': landmarks,
+                            'angles': current_angles
+                        })
 
                     return processed_frame
             except Exception as e:
-                print(f"Error processing frame: {e}")
+                print(f"Error processing frame from camera {camera_id}: {e}")
         return None
 
 
