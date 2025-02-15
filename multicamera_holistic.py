@@ -220,25 +220,48 @@ class MultiCameraHolisticBiomechanics:
         merged_landmarks['connections'] = self.get_connections()
         return merged_landmarks
 
-    def enable_camera(self, camera_index=0):
-        """Enable camera with reference tracking"""
-        cap = cv2.VideoCapture(camera_index)
+
+def enable_camera(self, camera_index=0):
+    """Enable camera with reference tracking"""
+    try:
+        # Verificar si estamos en Render
+        is_render = os.environ.get('RENDER') == 'true'
+
+        if is_render:
+            # En Render, intentar usar una configuración específica para servidores
+            cap = cv2.VideoCapture(0)
+
+            # Configurar propiedades específicas para Render
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            # Intentar usar el backend GSTREAMER si está disponible
+            if hasattr(cv2, 'CAP_GSTREAMER'):
+                cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+        else:
+            # En desarrollo local, usar la configuración normal
+            cap = cv2.VideoCapture(camera_index)
+
         if cap.isOpened():
             self.cameras[camera_index] = {
                 'capture': cap,
                 'holistic': self.mp_holistic.Holistic(
                     min_detection_confidence=0.5,
                     min_tracking_confidence=0.5,
-                    model_complexity=2,
+                    model_complexity=1,  # Reducido para mejor rendimiento en web
                     enable_segmentation=True,
                     refine_face_landmarks=True
                 ),
                 'landmarks_3d': {},
-                'weight': 1.0  # Peso inicial
+                'weight': 1.0
             }
 
             # La primera cámara será la referencia
             if self.reference_camera is None:
-               self.reference_camera = camera_index
+                self.reference_camera = camera_index
             return True
+
+    except Exception as e:
+        print(f"Error enabling camera: {e}")
         return False
+
+    return False
