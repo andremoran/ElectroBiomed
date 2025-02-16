@@ -44,28 +44,27 @@ class CameraManager:
         self.biomech_analysis = BiomechanicalAnalysis()
         self.all_landmarks = {}
 
-    def add_camera(self, camera_id):
-        if camera_id not in self.cameras:
+    def add_camera(self, camera_url):
+        if camera_url not in self.cameras:
             try:
-                cap = cv2.VideoCapture(camera_id)
+                cap = cv2.VideoCapture(camera_url)
                 if cap.isOpened():
-                    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-                    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-                    self.cameras[camera_id] = {
+                    self.cameras[camera_url] = {
                         'capture': cap,
                         'holistic': self.biomech.mp_holistic.Holistic(
                             min_detection_confidence=0.5,
                             min_tracking_confidence=0.5
                         )
                     }
-                    self.active_cameras.add(camera_id)
-                    print(f"Successfully initialized camera {camera_id}")
+                    self.active_cameras.add(camera_url)
+                    print(f"Successfully initialized camera {camera_url}")
                     return True
                 else:
-                    print(f"Failed to open camera {camera_id}")
+                    print(f"Failed to open camera {camera_url}")
             except Exception as e:
-                print(f"Error initializing camera {camera_id}: {e}")
+                print(f"Error initializing camera {camera_url}: {e}")
         return False
+
 
     def get_frame(self, camera_id):
         if camera_id in self.cameras:
