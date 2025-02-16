@@ -400,39 +400,3 @@
 </body>
 </html>
 
-    <!-- En tu template index.html, agrega este script -->
-<script>
-document.addEventListener('DOMContentLoaded', async function() {
-    try {
-        // Solicitar permisos de cámara al cargar la página
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        // Detener el stream inmediatamente ya que OpenCV lo manejará
-        stream.getTracks().forEach(track => track.stop());
-
-        // Conectar con Socket.IO
-        const socket = io();
-
-        socket.on('connect', () => {
-            console.log('Connected to server');
-        });
-
-        socket.on('camera_started', (data) => {
-            console.log('Camera started:', data.camera_id);
-        });
-
-        socket.on('data_update', (data) => {
-            // Tu código para manejar las actualizaciones de datos
-            if (data.landmarks) {
-                updateAvatarWithLandmarks(data.landmarks);
-            }
-            if (data.angles) {
-                updateAnglesDisplay(data.angles);
-            }
-        });
-
-    } catch (err) {
-        console.error('Error accessing camera:', err);
-        alert('Error accessing camera. Please make sure you have granted camera permissions.');
-    }
-});
-</script>
