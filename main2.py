@@ -47,36 +47,24 @@ class CameraManager:
     def add_camera(self, camera_id):
         if camera_id not in self.cameras:
             try:
-                # Configuración específica para la web
-                if os.environ.get('RENDER') == 'true':
-                    cap = cv2.VideoCapture(camera_id)
-                    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-                    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-                    # Usar MJPG para mejor compatibilidad web
-                    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
-                else:
-                    cap = cv2.VideoCapture(camera_id)
-                    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-                    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-
+                cap = cv2.VideoCapture(camera_id)
                 if cap.isOpened():
+                    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
                     self.cameras[camera_id] = {
                         'capture': cap,
                         'holistic': self.biomech.mp_holistic.Holistic(
                             min_detection_confidence=0.5,
-                            min_tracking_confidence=0.5,
-                            model_complexity=1  # Reducido para mejor rendimiento
+                            min_tracking_confidence=0.5
                         )
                     }
                     self.active_cameras.add(camera_id)
-
-                    # Emitir evento de cámara iniciada
-                    socketio.emit('camera_started', {'camera_id': camera_id})
+                    print(f"Successfully initialized camera {camera_id}")
                     return True
-
+                else:
+                    print(f"Failed to open camera {camera_id}")
             except Exception as e:
                 print(f"Error initializing camera {camera_id}: {e}")
-                return False
         return False
 
     def get_frame(self, camera_id):
@@ -92,17 +80,38 @@ class CameraManager:
 
                     if landmarks:
                         self.all_landmarks[camera_id] = landmarks
-                        current_angles = self.biomech_analysis.update_points_from_avatar(landmarks)
-                        socketio.emit('data_update', {
-                            'landmarks': landmarks,
-                            'angles': current_angles
-                        })
+
+                        if len(self.active_cameras) > 1:
+                            merged_landmarks = self.biomech.merge_landmarks(self.all_landmarks)
+                            if merged_landmarks:
+                                current_angles = self.biomech_analysis.update_points_from_avatar(merged_landmarks)
+                                socketio.emit('data_update', {
+                                    'landmarks': merged_landmarks,
+                                    'angles': current_angles
+                                })
+                        else:
+                            current_angles = self.biomech_analysis.update_points_from_avatar(landmarks)
+                            socketio.emit('data_update', {
+                                'landmarks': landmarks,
+                                'angles': current_angles
+                            })
 
                     return processed_frame
             except Exception as e:
-                print(f"Error processing frame from camera {camera_id}: {e}")
+                print(f"Error processing frame: {e}")
         return None
 
+    def release_camera(self, camera_id):
+        if camera_id in self.cameras:
+            try:
+                self.cameras[camera_id]['capture'].release()
+                self.cameras[camera_id]['holistic'].close()
+                self.active_cameras.remove(camera_id)
+                del self.cameras[camera_id]
+                return True
+            except Exception as e:
+                print(f"Error releasing camera {camera_id}: {e}")
+        return False
 
 # Initialize camera manager
 camera_manager = CameraManager()
@@ -184,6 +193,18 @@ def handle_connect():
         return
     print('Client connected')
 
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print('Client disconnected')
+    for camera_id in list(camera_manager.active_cameras):
+        camera_manager.release_camera(camera_id)
+
+@socketio.on('stop_camera')
+def handle_stop_camera(data):
+    camera_id = int(data.get('camera_id'))
+    if camera_manager.release_camera(camera_id):
+        emit('camera_stopped', {'camera_id': camera_id})
 
 if __name__ == '__main__':
     # Get port from environment variable (Render sets this automatically)
