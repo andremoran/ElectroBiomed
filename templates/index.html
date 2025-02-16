@@ -1,3 +1,9 @@
+    <!--
+
+    index.html
+    AVATAR MEDIAPIPE 3d
+    -->
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -80,24 +86,7 @@
            <script src="https://cdn.tailwindcss.com"></script>
     <title>ElectroBiomed</title>
     </script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const socket = io();
 
-            // Activar la cámara automáticamente al cargar la página
-            socket.emit('start_camera', { camera_id: 0 });
-
-            // Manejar la respuesta del servidor
-            socket.on('camera_started', (data) => {
-                console.log('Cámara iniciada:', data.camera_id);
-                // Aquí puedes agregar lógica adicional, como mostrar el feed de la cámara
-            });
-
-            socket.on('camera_stopped', (data) => {
-                console.log('Cámara detenida:', data.camera_id);
-            });
-        });
-    </script>
 </head>
 <body>
     <!-- Navegación -->
@@ -110,13 +99,19 @@
             </div>
 
             <!-- Botones del menú -->
+        <!-- Navigation Links -->
             <div class="space-x-4 flex flex-wrap mt-4 lg:mt-0 lg:flex-nowrap">
-                <a href="{{ url_for('landing_page') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded">Inicio</a>
-                <a href="{{ url_for('biomechanics_2d_page') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded">Análisis Biomecánico 2D</a>
-                <a href="{{ url_for('emg_page') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded">AB 2D + EMG</a>
-                <a href="{{ url_for('biomechanics_page') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded">Análisis Biomecánico 3D</a>
-                <a href="{{ url_for('landing_page') }}#agendar" class="text-white hover:bg-blue-700 px-3 py-2 rounded">Agendar Reunión</a>
-                <a href="{{ url_for('landing_page') }}#contacto" class="text-white hover:bg-blue-700 px-3 py-2 rounded">Contacto</a>
+                <a href="{{ url_for('landing_page') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm lg:text-base">Inicio</a>
+                <a href="{{ url_for('biomechanics_2d_page') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm lg:text-base">Análisis Biomecánico 2D</a>
+                <a href="{{ url_for('emg_page') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm lg:text-base">AB 2D + EMG</a>
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('biomechanics_page') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm lg:text-base">Análisis Biomecánico 3D</a>
+                    <a href="{{ url_for('logout') }}" class="text-white hover:bg-red-700 px-3 py-2 rounded text-sm lg:text-base">Cerrar Sesión</a>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm lg:text-base">Análisis Biomecánico 3D</a>
+                {% endif %}
+                <a href="{{ url_for('landing_page') }}#agendar" class="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm lg:text-base">Agendar Reunión</a>
+                <a href="{{ url_for('landing_page') }}#contacto" class="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm lg:text-base">Contacto</a>
             </div>
         </div>
     </nav>
@@ -135,6 +130,11 @@
             <div id="angles-panel" class="angles-panel"></div>
         </div>
     </div>
+
+
+    <button onclick="exportToExcel()">Exportar datos a Excel</button>
+    <button onclick="exportVideoAndAnalysis()">Exportar video y análisis</button>
+
 
 <script>
     const socket = io();
@@ -245,6 +245,41 @@
             socket.emit('stop_camera', { camera_id: id });
         }
     }
+
+//para botones de valor agregado
+function exportToExcel() {
+    const username = prompt("Por favor, ingrese su usuario:");
+    const password = prompt("Por favor, ingrese su contraseña:");
+
+    if (username && password) {
+        // Aquí puedes agregar la lógica para validar el usuario y contraseña
+        if (username === "usuario_valido" && password === "contraseña_valida") {
+            alert("Exportando datos a Excel...");
+            // Lógica para exportar a Excel
+        } else {
+            alert("Usuario o contraseña incorrectos.");
+        }
+    } else {
+        alert("Debe ingresar usuario y contraseña.");
+    }
+}
+
+function exportVideoAndAnalysis() {
+    const username = prompt("Por favor, ingrese su usuario:");
+    const password = prompt("Por favor, ingrese su contraseña:");
+
+    if (username && password) {
+        // Aquí puedes agregar la lógica para validar el usuario y contraseña
+        if (username === "usuario_valido" && password === "contraseña_valida") {
+            alert("Exportando video y análisis...");
+            // Lógica para exportar video y análisis
+        } else {
+            alert("Usuario o contraseña incorrectos.");
+        }
+    } else {
+        alert("Debe ingresar usuario y contraseña.");
+    }
+}
 </script>
 </body>
 </html>

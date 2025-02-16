@@ -1,4 +1,7 @@
+    <!--
 
+    landing_page.html
+    -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -21,19 +24,20 @@
 
 
      <!-- Botón de Logout -->
-        <div class="space-x-4 flex flex-wrap mt-4 lg:mt-0 lg:flex-nowrap">
-            <a href="{{ url_for('landing_page') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded">Inicio</a>
-            <a href="{{ url_for('biomechanics_2d_page') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded">Análisis Biomecánico 2D</a>
-            <a href="{{ url_for('emg_page') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded">AB 2D + EMG</a>
-            {% if current_user.is_authenticated %}
-                <a href="{{ url_for('biomechanics_page') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded">Análisis Biomecánico 3D</a>
-                <a href="{{ url_for('logout') }}" class="text-white hover:bg-red-700 px-3 py-2 rounded">Cerrar Sesión</a>
-            {% else %}
-                <a href="{{ url_for('login') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded">Análisis Biomecánico 3D</a>
-            {% endif %}
-            <a href="{{ url_for('landing_page') }}#agendar" class="text-white hover:bg-blue-700 px-3 py-2 rounded">Agendar Reunión</a>
-            <a href="{{ url_for('landing_page') }}#contacto" class="text-white hover:bg-blue-700 px-3 py-2 rounded">Contacto</a>
-        </div>
+        <!-- Navigation Links -->
+            <div class="space-x-4 flex flex-wrap mt-4 lg:mt-0 lg:flex-nowrap">
+                <a href="{{ url_for('landing_page') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm lg:text-base">Inicio</a>
+                <a href="{{ url_for('biomechanics_2d_page') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm lg:text-base">Análisis Biomecánico 2D</a>
+                <a href="{{ url_for('emg_page') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm lg:text-base">AB 2D + EMG</a>
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('biomechanics_page') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm lg:text-base">Análisis Biomecánico 3D</a>
+                    <a href="{{ url_for('logout') }}" class="text-white hover:bg-red-700 px-3 py-2 rounded text-sm lg:text-base">Cerrar Sesión</a>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm lg:text-base">Análisis Biomecánico 3D</a>
+                {% endif %}
+                <a href="{{ url_for('landing_page') }}#agendar" class="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm lg:text-base">Agendar Reunión</a>
+                <a href="{{ url_for('landing_page') }}#contacto" class="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm lg:text-base">Contacto</a>
+            </div>
         </div>
     </nav>
 
